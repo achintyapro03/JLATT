@@ -3,9 +3,10 @@ from numpy.linalg import norm
 from scipy.stats import wrapcauchy
 from Robot import Robot
 import matplotlib.pyplot as plt
+import pandas as pd
 
 
-class RobotWithSensors(Robot):
+class Robot_w_sensors(Robot):
     def __init__(self, x0, name, stat_data, sensor_data):
         super().__init__(x0, stat_data)
         
@@ -13,23 +14,28 @@ class RobotWithSensors(Robot):
         
         self.name = name
         
-        self.z_abs = []  # absolute measurement
+        # self.z_abs = []  # absolute measurement
+        self.z_abs = pd.DataFrame(columns=['Name', 'X', 'Y', 'Heading', 'Time'])
         self.v_abs = variances[0]  # absolute measurement variance
         self.abs_mes_prob = probabilities[0]
         
-        self.z_r = []  # distance and direction of other robots
+        # self.z_r = []  # distance and direction of other robots
+        self.z_r = pd.DataFrame(columns=['Name', 'Distance', 'Direction', 'Time'])
         self.v_r = variances[1]  # robot measurement variance
         self.z_r_max = max_distances[0]  # max measurement distance
         self.rel_mes_prob = probabilities[1]
         
-        self.z_t = []  # distance and direction of targets
+        # self.z_t = []  # distance and direction of targets
+        self.z_t = pd.DataFrame(columns=['Name', 'Distance', 'Direction', 'Time'])
         self.v_t = variances[2]  # target measurement variance
         self.z_t_max = max_distances[1]  # max measurement distance
 
     def update_abs_meas(self, time_stamp):
         measured_pose = self.true_pose + self.v_abs * np.random.randn(3)
         if np.random.rand() < self.abs_mes_prob:
-            self.z_abs.append({'Name': self.name, 'X': measured_pose[0], 'Y': measured_pose[1], 'Heading': measured_pose[2], 'Time': time_stamp})
+            # self.z_abs.append({'Name': self.name, 'X': measured_pose[0], 'Y': measured_pose[1], 'Heading': measured_pose[2], 'Time': time_stamp})
+            self.z_abs = pd.DataFrame([[self.name, measured_pose[0], measured_pose[1], measured_pose[2], time_stamp]],
+                                      columns=['Name', 'X', 'Y', 'Heading', 'Time'])
 
     def wrap_to_2pi(self, angle):
         return angle % (2 * np.pi)
@@ -47,14 +53,16 @@ class RobotWithSensors(Robot):
         return dist, self.wrap_to_2pi(angle)
 
     def update_rel_meas(self, robot_set, time_stamp):
-        self.z_r = []
+        self.z_r = pd.DataFrame(columns=['Name', 'Distance', 'Direction', 'Time'])
         for current_robot in robot_set:
             measure = self.rel_sensor_model(current_robot)
             if current_robot.name == self.name:
                 continue
             elif measure[0] < self.z_r_max:
                 if np.random.rand() < self.rel_mes_prob:
-                    self.z_r.append({'Name': current_robot.name, 'Distance': measure[0], 'Direction': measure[1], 'Time': time_stamp})
+                    newRow = pd.DataFrame([[current_robot.name, measure[0], measure[1], time_stamp]],
+                                          columns=['Name', 'Distance', 'Direction', 'Time'])
+                    self.z_r = self.z_r.append(newRow, ignore_index=True)
 
     def update_meas(self, robot_set, time_stamp):
         self.update_abs_meas(time_stamp)
@@ -73,7 +81,7 @@ def test_robot_with_sensors():
     sensor_data = [[0.01, 0.1, 0.1], [5, 10], [0.9, 0.9]]
 
     # Create the robot with sensors
-    robot_with_sensors = RobotWithSensors(x0, 'Robot1', stat_data, sensor_data)
+    robot_with_sensors = Robot_w_sensors(x0, 'Robot1', stat_data, sensor_data)
 
     # Time step
     dt = 1  # seconds
@@ -115,3 +123,89 @@ def test_robot_with_sensors():
 
 if(__name__ == '__main__'):
     test_robot_with_sensors()
+
+
+
+    """
+import numpy as np
+import pandas as pd
+from math import sqrt, atan2
+from numpy.random import rand, randn
+from numpy import wrap
+
+
+class Robot_w_sensors(Robot):
+    def __init__(self, x0, name, stat_data, sensor_data):
+        super().__init__(x0, stat_data)
+        variances = sensor_data[0]
+        max_distances = sensor_data[1]
+        probabilities = sensor_data[2]
+
+        self.v_abs = variances[0]
+        self.v_r = variances[1]
+        self.v_t = variances[2]
+
+        self.name = name
+
+        self.z_abs = pd.DataFrame(columns=['Name', 'X', 'Y', 'Heading', 'Time'])
+        self.abs_mes_prob = probabilities[0]
+
+        self.z_r = pd.DataFrame(columns=['Name', 'Distance', 'Direction', 'Time'])
+        self.z_t = pd.DataFrame(columns=['Name', 'Distance', 'Direction', 'Time'])
+        self.z_r_max = max_distances[0]
+        self.rel_mes_prob = probabilities[1]
+
+    def update_abs_meas(self, time_stamp):
+        measured_pose = self.true_Pose + self.v_abs * randn(3)
+        self.z_abs = pd.DataFrame(columns=['Name', 'X', 'Y', 'Heading', 'Time'])
+
+        if rand() < self.abs_mes_prob:
+            self.z_abs = pd.DataFrame([[self.name, measured_pose[0], measured_pose[1], measured_pose[2], time_stamp]],
+                                      columns=['Name', 'X', 'Y', 'Heading', 'Time'])
+
+    def rel_sensor_model(self, robot):
+        x_i, y_i, th_i = self.true_Pose
+        x_l, y_l, th_l = robot.true_Pose
+
+        dx = x_l - x_i
+        dy = y_l - y_i
+
+        dist = sqrt(dx**2 + dy**2) + self.v_r * randn()
+        angle = wrap(atan2(dy, dx) - th_i + self.v_r * randn(), 0, 2 * np.pi)
+
+        return dist, angle
+
+    def update_rel_meas(self, robot_set, time_stamp):
+        self.z_r = pd.DataFrame(columns=['Name', 'Distance', 'Direction', 'Time'])
+
+        for current_robot in robot_set:
+            measure = self.rel_sensor_model(current_robot)
+
+            if current_robot.name == self.name:
+                continue
+            elif measure[0] < self.z_r_max:
+                if rand() < self.rel_mes_prob:
+                    newRow = pd.DataFrame([[current_robot.name, measure[0], measure[1], time_stamp]],
+                                          columns=['Name', 'Distance', 'Direction', 'Time'])
+                    self.z_r = self.z_r.append(newRow, ignore_index=True)
+
+    def simple_rel_meas(self, robot_set, time_stamp):
+        self.z_r = pd.DataFrame(columns=['Name', 'Distance', 'dX', 'dY', 'Time'])
+
+        for current_robot in robot_set:
+            measure = self.rel_sensor_model(current_robot)
+
+            if current_robot.name == self.name:
+                continue
+            elif measure[0] < self.z_r_max:
+                if rand() < self.rel_mes_prob:
+                    dX = current_robot.true_Pose - self.true_Pose
+                    newRow = pd.DataFrame([[current_robot.name, measure[0], dX[0], dX[1], time_stamp]],
+                                          columns=['Name', 'Distance', 'dX', 'dY', 'Time'])
+                    self.z_r = self.z_r.append(newRow, ignore_index=True)
+
+    def update_meas(self, robot_set, time_stamp):
+        self.update_abs_meas(time_stamp)
+        self.update_rel_meas(robot_set, time_stamp)
+
+ """
