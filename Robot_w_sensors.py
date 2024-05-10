@@ -4,6 +4,7 @@ from scipy.stats import wrapcauchy
 from Robot import Robot
 import matplotlib.pyplot as plt
 import pandas as pd
+from numpy.random import rand, randn
 
 
 class Robot_w_sensors(Robot):
@@ -29,6 +30,7 @@ class Robot_w_sensors(Robot):
         self.z_t = pd.DataFrame(columns=['Name', 'Distance', 'Direction', 'Time'])
         self.v_t = variances[2]  # target measurement variance
         self.z_t_max = max_distances[1]  # max measurement distance
+    
 
     def update_abs_meas(self, time_stamp):
         measured_pose = self.true_pose + self.v_abs * np.random.randn(3)
@@ -63,6 +65,22 @@ class Robot_w_sensors(Robot):
                     newRow = pd.DataFrame([[current_robot.name, measure[0], measure[1], time_stamp]],
                                           columns=['Name', 'Distance', 'Direction', 'Time'])
                     self.z_r = self.z_r.append(newRow, ignore_index=True)
+
+    def simple_rel_meas(self, robot_set, time_stamp):
+        self.z_r = pd.DataFrame(columns=['Name', 'Distance', 'dX', 'dY', 'Time'])
+
+        for current_robot in robot_set:
+            measure = self.rel_sensor_model(current_robot)
+
+            if current_robot.name == self.name:
+                continue
+            elif measure[0] < self.z_r_max:
+                if rand() < self.rel_mes_prob:
+                    dX = current_robot.true_pose - self.true_pose
+                    newRow = pd.DataFrame([[current_robot.name, measure[0], dX[0], dX[1], time_stamp]],
+                                          columns=['Name', 'Distance', 'dX', 'dY', 'Time'])
+                    self.z_r = pd.concat([self.z_r, newRow], ignore_index=True)
+                    # self.z_r = self.z_r.append(newRow, ignore_index=True)
 
     def update_meas(self, robot_set, time_stamp):
         self.update_abs_meas(time_stamp)

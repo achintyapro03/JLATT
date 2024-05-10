@@ -36,27 +36,32 @@ class Robot_w_sensors_comm(Robot_w_sensors):
             if distance < self.link_max_dist and my_distance < self.link_max_dist:
                 if np.random.rand() < self.rel_link_prob:
                     rel_data = {'Name': robot.name, 'Distance': my_distance, 'Direction': my_direction, 'Pose_estimate': robot.pose_est, 'Error_covariance': robot.p_est, 'Time': time_stamp}
-                    self.data_rel.append(rel_data)
+                    # self.data_rel.append(rel_data)
+                    self.data_rel = pd.concat([self.data_rel, pd.DataFrame(rel_data)], ignore_index=True)
 
-    # def simple_rel_com(self, robot_set, time_stamp):
-    #     self.data_rel = pd.DataFrame(columns=['Name', 'Distance','Direction','Pose_estimate', 'Error_covariance','Time'])
+    def simple_rel_com(self, robot_set, time_stamp):
+        self.data_rel = pd.DataFrame(columns=['Name', 'dX','dY','Pose_estimate', 'Error_covariance','Time'])
         
-    #     for robot in robot_set:
-    #         his_row = np.where(self.z_r['Name'] == robot.name)[0]
-    #         my_row = np.where(robot.z_r['Name'] == self.name)[0]
+        for robot in robot_set:
+            his_row = np.where(self.z_r['Name'] == robot.name)[0]
+            my_row = np.where(robot.z_r['Name'] == self.name)[0]
             
-    #         if len(his_row) == 0 or len(my_row) == 0:
-    #             continue
+            if len(his_row) == 0 or len(my_row) == 0:
+                continue
             
-    #         distance = self.z_r['Distance'][his_row[0]]
-    #         my_distance = robot.z_r['Distance'][my_row[0]]
-    #         my_dx = robot.z_r['dX'][my_row[0]]
-    #         my_dy = robot.z_r['dY'][my_row[0]]
+            distance = self.z_r['Distance'][his_row[0]]
+            my_distance = robot.z_r['Distance'][my_row[0]]
+            my_dx = robot.z_r['dX'][my_row[0]]
+            my_dy = robot.z_r['dY'][my_row[0]]
             
-    #         if distance < self.link_max_dist and my_distance < self.link_max_dist:
-    #             if np.random.rand() < self.rel_link_prob:
-    #                 rel_data = {'Name': robot.name, 'dX': my_dx, 'dY': my_dy, 'Pose_estimate': robot.pose_est, 'Error_covariance': robot.p_est, 'Time': time_stamp}
-    #                 self.data_rel.append(rel_data)
+            if distance < self.link_max_dist and my_distance < self.link_max_dist:
+                if np.random.rand() < self.rel_link_prob:
+                    # rel_data = {'Name': robot.name, 'dX': my_dx, 'dY': my_dy, 'Pose_estimate': robot.pose_est, 'Error_covariance': robot.p_est, 'Time': time_stamp}
+                    # self.data_rel.append(rel_data)
+                    rel_data = pd.DataFrame([[robot.name, my_dx, my_dy, robot.pose_est,robot.p_est, time_stamp]],
+                                          columns=['Name','dX', 'dY','Pose_estimate','Error_covariance', 'Time'])
+                    self.data_rel = pd.concat([self.data_rel, rel_data], ignore_index=True)
+
 
     def update_com(self, robot_set, time_stamp):
         self.update_rel_com(robot_set, time_stamp)
