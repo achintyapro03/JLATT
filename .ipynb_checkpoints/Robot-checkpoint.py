@@ -8,6 +8,7 @@ class Robot:
         self.true_pose[2] = self.wrap_to_2pi(self.true_pose[2])
         self.true_path = [self.true_pose.copy()]
         # self.true_path = np.transpose(self.true_pose.copy())
+        print(self.true_path)
 
         e_var0, w_var = stat_data
 
@@ -26,8 +27,13 @@ class Robot:
         vel = np.array([v * np.cos(phi), v * np.sin(phi), w])
         self.true_pose += vel * dt
         self.true_pose[2] = self.wrap_to_2pi(self.true_pose[2])
+        print("hi1")
+        print(self.true_path)
         self.true_path.append(self.true_pose.copy())
-
+        
+        print("hi2")
+        print(self.true_path)
+        
 
     def dynamics_est(self, pose_est, u, dt):
         # Simulate dynamics with process noise
@@ -119,6 +125,7 @@ class Robot:
             [np.cos(phi), np.sin(phi)],
             [-np.sin(phi), np.cos(phi)]
         ])
+        # print(np.size(ellipse_x_r))
         r_ellipse = np.dot(np.array([ellipse_x_r, ellipse_y_r]).T, R)
 
         # Plot the error ellipse
