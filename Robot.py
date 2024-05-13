@@ -198,12 +198,12 @@ def test_robot():
         plt.pause(0.05)  # Pause to visualize each step
 
     # Plot the true path
-    true_path = np.array(robot.true_path)
-    plt.plot(true_path[:, 0], true_path[:, 1], 'g-', label='True Path')
+    # true_path = np.array(robot.true_path)
+    # plt.plot(true_path[:, 0], true_path[:, 1], 'g-', label='True Path')
 
-    # Draw the robot triangle at the current position
-    triangle = robot.draw(-1)
-    plt.fill(triangle[0], triangle[1], 'b', alpha=0.5, label='Robot')
+    # # Draw the robot triangle at the current position
+    # triangle = robot.draw(-1)
+    # plt.fill(triangle[0], triangle[1], 'b', alpha=0.5, label='Robot')
 
     # Set plot settings
     plt.xlabel('X')
