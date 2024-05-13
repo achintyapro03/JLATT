@@ -56,8 +56,6 @@ class Robot_w_sensors_comm(Robot_w_sensors):
             
             if distance < self.link_max_dist and my_distance < self.link_max_dist:
                 if np.random.rand() < self.rel_link_prob:
-                    # rel_data = {'Name': robot.name, 'dX': my_dx, 'dY': my_dy, 'Pose_estimate': robot.pose_est, 'Error_covariance': robot.p_est, 'Time': time_stamp}
-                    # self.data_rel.append(rel_data)
                     rel_data = pd.DataFrame([[robot.name, my_dx, my_dy, robot.pose_est,robot.p_est, time_stamp]],
                                           columns=['Name','dX', 'dY','Pose_estimate','Error_covariance', 'Time'])
                     self.data_rel = pd.concat([self.data_rel, rel_data], ignore_index=True)

@@ -1,6 +1,5 @@
 import numpy as np
 from numpy.linalg import norm
-from scipy.stats import wrapcauchy
 from Robot import Robot
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -12,30 +11,29 @@ class Robot_w_sensors(Robot):
         super().__init__(x0, stat_data)
         
         variances, max_distances, probabilities = sensor_data
+
+        self.v_abs = variances[0]  # absolute measurement variance
+        self.v_r = variances[1]  # robot measurement variance
+        self.v_t = variances[2]  # target measurement variance
         
         self.name = name
         
-        # self.z_abs = []  # absolute measurement
         self.z_abs = pd.DataFrame(columns=['Name', 'X', 'Y', 'Heading', 'Time'])
-        self.v_abs = variances[0]  # absolute measurement variance
         self.abs_mes_prob = probabilities[0]
         
-        # self.z_r = []  # distance and direction of other robots
         self.z_r = pd.DataFrame(columns=['Name', 'Distance', 'Direction', 'Time'])
-        self.v_r = variances[1]  # robot measurement variance
-        self.z_r_max = max_distances[0]  # max measurement distance
-        self.rel_mes_prob = probabilities[1]
-        
-        # self.z_t = []  # distance and direction of targets
         self.z_t = pd.DataFrame(columns=['Name', 'Distance', 'Direction', 'Time'])
-        self.v_t = variances[2]  # target measurement variance
-        self.z_t_max = max_distances[1]  # max measurement distance
+        self.z_r_max = max_distances[0]  # max measurement distance
+        
+        self.rel_mes_prob = probabilities[1]
+        # self.z_t_max = max_distances[1]  # max measurement distance
     
 
     def update_abs_meas(self, time_stamp):
+        self.z_abs = pd.DataFrame(columns=['Name', 'X', 'Y', 'Heading', 'Time'])
+
         measured_pose = self.true_pose + self.v_abs * np.random.randn(3)
         if np.random.rand() < self.abs_mes_prob:
-            # self.z_abs.append({'Name': self.name, 'X': measured_pose[0], 'Y': measured_pose[1], 'Heading': measured_pose[2], 'Time': time_stamp})
             self.z_abs = pd.DataFrame([[self.name, measured_pose[0], measured_pose[1], measured_pose[2], time_stamp]],
                                       columns=['Name', 'X', 'Y', 'Heading', 'Time'])
 
@@ -63,8 +61,9 @@ class Robot_w_sensors(Robot):
             elif measure[0] < self.z_r_max:
                 if np.random.rand() < self.rel_mes_prob:
                     newRow = pd.DataFrame([[current_robot.name, measure[0], measure[1], time_stamp]],
-                                          columns=['Name', 'Distance', 'Direction', 'Time'])
-                    self.z_r = self.z_r.append(newRow, ignore_index=True)
+                                        columns=['Name', 'Distance', 'Direction', 'Time'])
+                    self.z_r = pd.concat([self.z_r, newRow], ignore_index=True)
+
 
     def simple_rel_meas(self, robot_set, time_stamp):
         self.z_r = pd.DataFrame(columns=['Name', 'Distance', 'dX', 'dY', 'Time'])
@@ -102,7 +101,7 @@ def test_robot_with_sensors():
     robot_with_sensors = Robot_w_sensors(x0, 'Robot1', stat_data, sensor_data)
 
     # Time step
-    dt = 1  # seconds
+    dt = 0.1  # seconds
 
     # Create a figure
     plt.figure()

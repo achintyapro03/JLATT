@@ -6,7 +6,8 @@ class Robot:
     def __init__(self, x0, stat_data):
         self.true_pose = np.array(x0, dtype=np.float64)
         self.true_pose[2] = self.wrap_to_2pi(self.true_pose[2])
-        self.true_path = [self.true_pose.copy()]
+        # self.true_path = [self.true_pose.copy()]
+        self.true_path = np.transpose(self.true_pose.copy())
 
         e_var0, w_var = stat_data
 
@@ -25,7 +26,7 @@ class Robot:
         vel = np.array([v * np.cos(phi), v * np.sin(phi), w])
         self.true_pose += vel * dt
         self.true_pose[2] = self.wrap_to_2pi(self.true_pose[2])
-        self.true_path.append(self.true_pose.copy())
+        np.append(self.true_path, np.transpose(self.true_pose.copy()))
 
     def dynamics_est(self, pose_est, u, dt):
         # Simulate dynamics with process noise
@@ -39,17 +40,18 @@ class Robot:
 
     def propagate(self, dt, v, w):
         pose_est = self.pose_est
+
+##TODO: implement IMPORTANT MATLAB it is row vector
         u = np.array([v, w])
 
-        phi = pose_est[2]
         Phi = np.array([
-            [1, 0, -u[0] * dt * np.sin(phi)],
-            [0, 1, u[0] * dt * np.cos(phi)],
+            [1, 0, -u[0] * dt * np.sin(pose_est[2])],
+            [0, 1, u[0] * dt * np.cos(pose_est[2])],
             [0, 0, 1]
         ])
         G = np.array([
-            [np.cos(phi), 0],
-            [np.sin(phi), 0],
+            [np.cos(pose_est[2]), 0],
+            [np.sin(pose_est[2]), 0],
             [0, 1]
         ])
         Q = G.dot(self.process_cov).dot(G.T)
@@ -116,6 +118,7 @@ class Robot:
             [np.cos(phi), np.sin(phi)],
             [-np.sin(phi), np.cos(phi)]
         ])
+        # print(np.size(ellipse_x_r))
         r_ellipse = np.dot(np.array([ellipse_x_r, ellipse_y_r]).T, R)
 
         # Plot the error ellipse

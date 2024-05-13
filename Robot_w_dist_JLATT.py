@@ -14,12 +14,12 @@ class Robot_w_dist_JLATT(Robot_w_sensors_comm):
         n = len(x_set)
         alpha_weights = np.zeros(n)
         for i in range(n):
-            alpha_weights[i] = 1 / np.trace(p_set[i])
+            alpha_weights[i] = float(1.0 / np.trace(p_set[i]))
         alpha_weights /= np.sum(alpha_weights)
 
         p_ci_inv = np.zeros_like(p_set[0])
         for i in range(n):
-            p_ci_inv += alpha_weights[i] / p_set[i]
+            p_ci_inv += float((alpha_weights[i]*1.0) / p_set[i])
         p_ci = np.linalg.inv(p_ci_inv)
 
         x_ci = np.zeros_like(x_set[0])
@@ -36,7 +36,7 @@ class Robot_w_dist_JLATT(Robot_w_sensors_comm):
             data_row = self.data_rel[l]
             sender_name = data_row['Name']
             sender_zr_row = np.where(self.z_r['Name'] == sender_name)[0]
-            zr_row = self.z_r[sender_zr_row]
+            zr_row = self.z_r[sender_zr_row[0]]
 
             z_il = np.array([data_row['Distance'], data_row['Direction']])
             z_li = np.array([zr_row['Distance'], zr_row['Direction']])
@@ -50,13 +50,16 @@ class Robot_w_dist_JLATT(Robot_w_sensors_comm):
             phi_il = (np.angle(z_il[1]) + Pose_l[2]) % (2 * np.pi)
             phi_li = (np.angle(z_li[1]) + Pose_i[2]) % (2 * np.pi)
             dphi_il = (phi_il - phi_li + np.pi) % (2 * np.pi)
+
             if dphi_il > (2 * np.pi - 0.001):
                 dphi_il = 0
+
             dz_il = np.array([distance_diff, dphi_il])
             dz_il[dz_il < 0.001] = 0
 
             dx = Pose_l[0] - Pose_i[0]
             dy = Pose_l[1] - Pose_i[1]
+
             H_i = np.array([[-dx / np.sqrt(dx**2 + dy**2), -dy / np.sqrt(dx**2 + dy**2), 0],
                             [-dy / (dx**2 + dy**2), dx / (dx**2 + dy**2), -1]])
             H_l = np.array([[dx / np.sqrt(dx**2 + dy**2), dy / np.sqrt(dx**2 + dy**2), 0],
@@ -76,13 +79,22 @@ class Robot_w_dist_JLATT(Robot_w_sensors_comm):
         if not s_set:
             pass
         else:
-            nu = 1 / n_corrections
-            inv_p_hat = sum(nu * np.array(s_set))
+            nu = float(1.0 / n_corrections)
+            inv_p_hat = 0
+
+            # WARNING: check here
+
+            for i in range(len(s_set)):
+                inv_p_hat += nu * s_set[i]
+
             inv_p_hat[inv_p_hat < 0.1] = 0
             inv_p_hat += 1e-3 * np.eye(inv_p_hat.shape[0])
             p_hat = np.linalg.inv(inv_p_hat)
 
-            x_hat = sum(nu * inv_p_hat.dot(np.array(y_set))) #Check this out
+            x_hat = 0 #Check this out
+            for i in range(len(y_set)):
+                x_hat += nu * np.dot(inv_p_hat, y_set[i])
+
             x_hat[2] = (x_hat[2] + np.pi) % (2 * np.pi) - np.pi
 
             p_est = self.p_est
@@ -101,13 +113,14 @@ class Robot_w_dist_JLATT(Robot_w_sensors_comm):
             L = inv_p_hat - (1 - alpha) * Gamma
             new_p_est = np.linalg.inv(Omega + inv_p_hat - Gamma)
             new_Pose = new_p_est.dot(K.dot(np.linalg.inv(Omega)).dot(q) + L.dot(x_hat))
-            new_Pose[2] = (new_Pose[2] + 2 * np.pi) % (2 * np.pi)
+            new_Pose[2] = (new_Pose[2]) % (2 * np.pi)
 
             if self.debug:
-                save = np.concatenate((self.Pose_est, new_Pose, self.true_Pose))
-                self.save_est.append(save)
-                save = np.concatenate((self.p_est.flatten(), new_p_est.flatten()))
-                self.save_cov.append(save)
+                save = np.concatenate((self.Pose_est, new_Pose, self.true_Pose), axis = 1)
+                self.save_est = np.vstack((self.save_est, save))
+                save = np.concatenate((self.p_est, new_p_est), axis = 1)
+                self.save_cov = np.vstack((self.save_cov, save))
+
                 e_before = np.abs(self.Pose_est - self.true_Pose)
                 e_after = np.abs(new_Pose - self.true_Pose)
                 if np.all(e_before < e_after):
@@ -141,7 +154,7 @@ class Robot_w_dist_JLATT(Robot_w_sensors_comm):
             z_li = np.array([zr_row['dX'], zr_row['dY']])
             # print(data_row['Error_covariance'])
             Pose_l = data_row['Pose_estimate'][0]
-            p_l = data_row['Error_covariance']
+            p_l = data_row['Error_covariance'][0]
             Pose_i = self.pose_est
             p_i = self.p_est
 
@@ -163,16 +176,20 @@ class Robot_w_dist_JLATT(Robot_w_sensors_comm):
         if not s_set:
             pass
         else:
-            nu = 1 / n_corrections
-            inv_p_hat = sum(nu * np.array(s_set))
+            nu = float(1.0 / n_corrections)
+            inv_p_hat = 0
+            for i in range(len(s_set)):
+                inv_p_hat += nu * s_set[i]
+                
             inv_p_hat[inv_p_hat < 0.1] = 0
             inv_p_hat += 1e-3 * np.eye(inv_p_hat.shape[0])
             p_hat = np.linalg.inv(inv_p_hat)
             print(inv_p_hat.shape,np.array(y_set).T.shape)
-            x_hat = 0
-            # print(inv_p_hat.shape,(np.array(y_set[i]).T).shape)
-            for i in range((np.array(y_set).T).shape[0]):
-                x_hat = x_hat + (nu * inv_p_hat.dot(np.array(y_set[i]).T))
+
+            x_hat = 0 #Check this out
+            for i in range(len(y_set)):
+                x_hat += nu * np.dot(inv_p_hat, y_set[i])
+
                 # print("Iteration:",i,"x_hat = ",x_hat)
             x_hat[2] = (x_hat[2] + np.pi) % (2 * np.pi) - np.pi
 
@@ -191,17 +208,16 @@ class Robot_w_dist_JLATT(Robot_w_sensors_comm):
             K = Omega - alpha * Gamma
             L = inv_p_hat - (1 - alpha) * Gamma
             new_p_est = np.linalg.inv(Omega + inv_p_hat - Gamma)
-            new_L = L.dot(x_hat)
-            new_Pose = new_p_est.dot(K.dot(np.linalg.inv(Omega)).dot(q))
-            # print(L.shape,x_hat.shape)
-            new_Pose = new_Pose + new_L
+            new_Pose = new_p_est.dot(K.dot(np.linalg.inv(Omega)).dot(q) + L.dot(x_hat))
+            # new_Pose = new_Pose + L.dot(x_hat)
             # print("New_ Pose =",new_Pose)
             new_Pose[2] = (new_Pose[2] + 2 * np.pi) % (2 * np.pi)
             if self.debug:
-                save = np.concatenate((self.Pose_est, new_Pose, self.true_Pose))
-                self.save_est.append(save)
-                save = np.concatenate((self.p_est.flatten(), new_p_est.flatten()))
-                self.save_cov.append(save)
+                save = np.concatenate((self.Pose_est, new_Pose, self.true_Pose), axis = 1)
+                self.save_est = np.vstack((self.save_est, save))
+                save = np.concatenate((self.p_est, new_p_est), axis = 1)
+                self.save_cov = np.vstack((self.save_cov, save))
+
                 e_before = np.abs(self.Pose_est - self.true_Pose)
                 e_after = np.abs(new_Pose - self.true_Pose)
                 if np.all(e_before < e_after):
