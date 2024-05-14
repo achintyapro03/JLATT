@@ -93,6 +93,7 @@ class Robot:
         plt.plot(pose[0], pose[1], 'bo')  # Plot a blue circle at the estimated position
 
         # Calculate the uncertainty ellipse for x and y
+        P = np.array(P)
         P_position = P[:2, :2]
         eigval, eigvec = eig(P_position)
         

@@ -56,7 +56,6 @@ class Robot_w_sensors(Robot):
         self.z_r = pd.DataFrame(columns=['Name', 'Distance', 'Direction', 'Time'])
         for current_robot in robot_set:
             measure = self.rel_sensor_model(current_robot)
-
             if current_robot.name == self.name:
                 continue
             elif measure[0] < self.z_r_max:
@@ -64,7 +63,6 @@ class Robot_w_sensors(Robot):
                     newRow = pd.DataFrame([[current_robot.name, measure[0], measure[1], time_stamp]],
                                         columns=['Name', 'Distance', 'Direction', 'Time'])
                     self.z_r = pd.concat([self.z_r, newRow], ignore_index=True)
-
 
 
     def simple_rel_meas(self, robot_set, time_stamp):

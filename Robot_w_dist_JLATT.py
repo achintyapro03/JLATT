@@ -1,6 +1,12 @@
 import numpy as np
 from Robot_w_sens_and_comm import Robot_w_sensors_comm
 
+class myList():
+    def __init__(self, l):
+        self.list = l
+    def getVal(self):
+        return self.list
+
 class Robot_w_dist_JLATT(Robot_w_sensors_comm):
     def __init__(self, x0, name, stat_data, sensor_data, connection_data, debug):
         super().__init__(x0, name, stat_data, sensor_data, connection_data)
@@ -29,23 +35,23 @@ class Robot_w_dist_JLATT(Robot_w_sensors_comm):
 
     def corrections_from_com(self, t):
         n_corrections = len(self.data_rel)
+
         s_set = []
         y_set = []
 
         for l in range(len(self.data_rel)):
-            data_row = self.data_rel[l]
+
+            data_row = self.data_rel.iloc[l]
             sender_name = data_row['Name']
             sender_zr_row = np.where(self.z_r['Name'] == sender_name)[0]
-            zr_row = self.z_r[sender_zr_row[0]]
-
+            zr_row = self.z_r.iloc[sender_zr_row[0]]
             z_il = np.array([data_row['Distance'], data_row['Direction']])
             z_li = np.array([zr_row['Distance'], zr_row['Direction']])
 
 
 # beware #################################################################################
 ##########################################################################################
-
-            Pose_l = data_row['Pose_estimate'][0]
+            Pose_l = data_row['Pose_estimate']
             p_l = data_row['Error_covariance']
             Pose_i = self.Pose_est
             p_i = self.p_est
@@ -80,9 +86,11 @@ class Robot_w_dist_JLATT(Robot_w_sensors_comm):
 
             s_set.append(s_l)
             y_set.append(y_l)
+
         if not s_set:
             pass
         else:
+
             nu = float(1.0 / n_corrections)
             inv_p_hat = 0
 
@@ -102,7 +110,11 @@ class Robot_w_dist_JLATT(Robot_w_sensors_comm):
             x_hat[2] = (x_hat[2] + np.pi) % (2 * np.pi) - np.pi
 
             p_est = self.p_est
-            p_est[p_est < 0.1] = 0
+            for i in range(len(p_est)):
+                for j in range(len(p_est[i])):
+                    if(p_est[i][j] < 0.1):
+                        p_est[i][j] = 0
+            p_est = np.array(p_est)
             p_est += 1e-3 * np.eye(p_est.shape[0])
             Omega = np.linalg.inv(p_est)
             q = Omega.dot(self.Pose_est)
@@ -153,7 +165,8 @@ class Robot_w_dist_JLATT(Robot_w_sensors_comm):
 
             z_il = np.array([data_row['dX'], data_row['dY']])
             z_li = np.array([zr_row['dX'], zr_row['dY']])
-            Pose_l = data_row['Pose_estimate'][0]
+
+            Pose_l = data_row['Pose_estimate']
             p_l = data_row['Error_covariance']
             Pose_i = self.pose_est
             p_i = self.p_est
@@ -194,7 +207,11 @@ class Robot_w_dist_JLATT(Robot_w_sensors_comm):
             x_hat[2] = (x_hat[2] + np.pi) % (2 * np.pi) - np.pi
 
             p_est = self.p_est
-            p_est[p_est < 0.1] = 0
+            for i in range(len(p_est)):
+                for j in range(len(p_est[i])):
+                    if(p_est[i][j] < 0.1):
+                        p_est[i][j] = 0
+            p_est = np.array(p_est)
             p_est += 1e-3 * np.eye(p_est.shape[0])
             Omega = np.linalg.inv(p_est)
             q = Omega.dot(self.pose_est)
